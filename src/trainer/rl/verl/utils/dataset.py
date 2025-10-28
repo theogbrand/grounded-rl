@@ -198,8 +198,11 @@ class RLHFDataset(Dataset, ImageProcessMixin):
             input_ids = model_inputs.pop("input_ids")[0]
             attention_mask = model_inputs.pop("attention_mask")[0]
 
-        if self.processor is not None and self.processor.image_processor.__class__.__name__ in ["Qwen2VLImageProcessor", "Qwen2VLImageProcessorFast"]:
-            # qwen2vl mrope
+        if self.processor is not None and self.processor.image_processor.__class__.__name__ in [
+            "Qwen2VLImageProcessor", "Qwen2VLImageProcessorFast",
+            "Qwen3VLImageProcessor", "Qwen3VLImageProcessorFast"
+        ]:
+            # qwen2vl/qwen3vl mrope
             position_ids = get_rope_index(
                 self.processor,
                 input_ids=input_ids,

@@ -20,8 +20,10 @@ client = OpenAI(
 
 class Qwen_VLLM():
     """
-    Wraps a Qwen2_VL model for single-step generation 
+    Wraps a Qwen2_VL/Qwen3_VL model for single-step generation 
     of 'thoughts' or final answers. Loaded one instance per Accelerate process.
+    
+    For Qwen3-VL-235B-A22B-Thinking models, supports reasoning tokens.
     """
 
     def __init__(
@@ -36,6 +38,7 @@ class Qwen_VLLM():
         final_token_end: str = "</final>",
         multicrop: bool = False,
         repetition_penalty: float = 0.0,
+        pretrained: str = None,  # Added to detect thinking models
         **kwargs,
     ):
         """
@@ -57,6 +60,13 @@ class Qwen_VLLM():
         self.final_token_end = final_token_end
         self.multicrop = multicrop
         self.repetition_penalty = repetition_penalty
+        self.pretrained = pretrained
+        
+        # Detect if this is a Qwen3 thinking model
+        self.is_thinking_model = pretrained and "thinking" in pretrained.lower() if pretrained else False
+        if self.is_thinking_model:
+            eval_logger.info(f"Detected Qwen3 Thinking model: {pretrained}")
+        
         if examples is not None:
             with open(examples, "r") as f:
                 self.examples = json.load(f)
@@ -233,17 +243,25 @@ class Qwen_VLLM():
         else:
             temperature = self.temperature
 
+        # For thinking models, add reasoning-specific parameters
+        extra_body = {
+            "continue_final_message": continue_final_message, 
+            "add_generation_prompt": add_generation_prompt,
+            "repetition_penalty": self.repetition_penalty
+        }
+        
+        # Enable reasoning mode for thinking models
+        if self.is_thinking_model:
+            extra_body["enable_reasoning"] = True
+            extra_body["reasoning_parser"] = "deepseek_r1"
+        
         completion = client.chat.completions.create(
             model="qwen_vllm",
             messages=messages,
             max_tokens=self.max_new_tokens,
             temperature=temperature,
             top_p=self.top_p,
-            extra_body={
-                "continue_final_message": continue_final_message, 
-                "add_generation_prompt": add_generation_prompt,
-                "repetition_penalty": self.repetition_penalty
-                }
+            extra_body=extra_body
         )
         answer = completion.choices[0].message.content
 
