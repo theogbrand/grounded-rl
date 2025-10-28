@@ -7,9 +7,10 @@ PORT=9001 # port for vllm server
 
 # export port so src/vlmsearch/models/qwen_vllm.py can find the vllm server
 export PORT
+export DATA_ROOT="/home/users/nus/ob1/scratch/grounded-rl-data"
 
 if [ "$dataset" == "sat2" ]; then
-  SYSTEM_PROMPT="""You are a helpful assistant tasked with answering a question about an image. You should systematically reason through the problem step by step by checking and verifying relevant image regions, while grounding reasoning steps to specific (x, y) points in the image:\nEach reasoning step must be enclosed within '<think>' tags and reference exactly one specific coordinate (x, y):\n<think>\n{Single reasoning step with a grounded point} (x, y).\n</think>\nWhen ready to provide the final answer, enclose it within '<answer>' tags:\n<answer> {text of final answer} </answer>\nYour task is to help the user answer the question that may involve small details in the image.\n- Generate ONLY ONE reasoning step OR the final answer per response.\n- Regions are distinct, non-overlapping areas (e.g., quadrants like top-left, small elements or objects, zones like background/foreground).\n- Each step should describe the region then evaluate it for its relevance to the task and to previous steps.\n- Never repeat coordinates from previous steps.\n- Begin by exploring diverse regions, even if they seem less likely, to ensure comprehensive coverage before narrowing down.\n- Prioritize broad coverage of diverse candidates before deciding.\n- Aim for accurate, representative points in the described area/element/object.\n- If unclear, infer based on likely context or purpose.\n- Your final answer should be the text of the choice you think is most correct.\n- Verify each step by examining multiple possible solutions before selecting a final coordinate.\n- Format points as (x, y)"""
+  SYSTEM_PROMPT="You are a helpful assistant tasked with answering a question about an image. You should systematically reason through the problem step by step by checking and verifying relevant image regions, while grounding reasoning steps to specific (x, y) points in the image:\nEach reasoning step must be enclosed within '<think>' tags and reference exactly one specific coordinate (x, y):\n<think>\n{Single reasoning step with a grounded point} (x, y).\n</think>\nWhen ready to provide the final answer, enclose it within '<answer>' tags:\n<answer> {text of final answer} </answer>\nYour task is to help the user answer the question that may involve small details in the image.\n- Generate ONLY ONE reasoning step OR the final answer per response.\n- Regions are distinct, non-overlapping areas (e.g., quadrants like top-left, small elements or objects, zones like background/foreground).\n- Each step should describe the region then evaluate it for its relevance to the task and to previous steps.\n- Never repeat coordinates from previous steps.\n- Begin by exploring diverse regions, even if they seem less likely, to ensure comprehensive coverage before narrowing down.\n- Prioritize broad coverage of diverse candidates before deciding.\n- Aim for accurate, representative points in the described area/element/object.\n- If unclear, infer based on likely context or purpose.\n- Your final answer should be the text of the choice you think is most correct.\n- Verify each step by examining multiple possible solutions before selecting a final coordinate.\n- Format points as (x, y)"
 
   DATA_FILE="$DATA_ROOT/spatial_reasoning/vigorl_sat2_MCTS.jsonl"
 
@@ -17,7 +18,7 @@ if [ "$dataset" == "sat2" ]; then
   JUDGE="string_match"
 
 elif [ "$dataset" == "web_grounding" ]; then
-  SYSTEM_PROMPT="""You are a helpful assistant tasked with grounding an element on a web page. You should systematically reason through the problem step by step by checking and verifying relevant webpage regions, while grounding reasoning steps to specific (x, y) points in the image:\nEach reasoning step must be enclosed within '<think>' tags and reference exactly one specific coordinate (x, y):\n<think>\n{Single reasoning step with a grounded point} (x, y).\n</think>\nWhen ready to provide the final answer, enclose it within '<answer>' tags:\n<answer> (xf, yf) </answer>\nYour task is to help the user identify precise (x,y) coordinates of a described area/element/object based on a description.\n- Generate ONLY ONE reasoning step OR the final answer per response.\n- Regions are distinct, non-overlapping areas (e.g., quadrants like top-left, elements like tree/button, zones like background/foreground).\n- Each step should describe the region then evaluate it for its relevance to the task and to previous steps.\n- Never repeat coordinates from previous steps.\n- Begin by exploring diverse regions, even if they seem less likely, to ensure comprehensive coverage before narrowing down.\n- Prioritize broad coverage of diverse candidates before deciding.\n- Aim for accurate, representative points in the described area/element/object.\n- If unclear, infer based on likely context or purpose.\n- Verify each step by examining multiple possible solutions before selecting a final coordinate.\n- Format points as (x, y)"""
+  SYSTEM_PROMPT="You are a helpful assistant tasked with grounding an element on a web page. You should systematically reason through the problem step by step by checking and verifying relevant webpage regions, while grounding reasoning steps to specific (x, y) points in the image:\nEach reasoning step must be enclosed within '<think>' tags and reference exactly one specific coordinate (x, y):\n<think>\n{Single reasoning step with a grounded point} (x, y).\n</think>\nWhen ready to provide the final answer, enclose it within '<answer>' tags:\n<answer> (xf, yf) </answer>\nYour task is to help the user identify precise (x,y) coordinates of a described area/element/object based on a description.\n- Generate ONLY ONE reasoning step OR the final answer per response.\n- Regions are distinct, non-overlapping areas (e.g., quadrants like top-left, elements like tree/button, zones like background/foreground).\n- Each step should describe the region then evaluate it for its relevance to the task and to previous steps.\n- Never repeat coordinates from previous steps.\n- Begin by exploring diverse regions, even if they seem less likely, to ensure comprehensive coverage before narrowing down.\n- Prioritize broad coverage of diverse candidates before deciding.\n- Aim for accurate, representative points in the described area/element/object.\n- If unclear, infer based on likely context or purpose.\n- Verify each step by examining multiple possible solutions before selecting a final coordinate.\n- Format points as (x, y)"
 
   DATA_FILE="$DATA_ROOT/web_grounding/vigorl_osatlas_MCTS.jsonl"
 
@@ -25,7 +26,7 @@ elif [ "$dataset" == "web_grounding" ]; then
   JUDGE="point_in_bbox"
 
 elif [ "$dataset" == "vstar" ]; then
-  SYSTEM_PROMPT="""You are a helpful assistant tasked with answering a question about an image. You should systematically reason through the problem step by step by checking and verifying relevant image regions, while grounding reasoning steps to specific (x, y) points in the image:\nEach reasoning step must be enclosed within '<think>' tags and reference exactly one specific coordinate (x, y):\n<think>\n{Single reasoning step with a grounded point} (x, y).\n</think>\nWhen ready to provide the final answer, enclose it within '<answer>' tags:\n<answer> {final answer} </answer>\nYour task is to help the user answer the question that may involve small details in the image.\n- Generate ONLY ONE reasoning step OR the final answer per response.\n- Regions are distinct, non-overlapping areas (e.g., quadrants like top-left, small elements or objects, zones like background/foreground).\n- Each step should describe the region then evaluate it for its relevance to the task and to previous steps.\n- Never repeat coordinates from previous steps.\n- Begin by exploring diverse regions, even if they seem less likely, to ensure comprehensive coverage before narrowing down.\n- Prioritize broad coverage of diverse candidates before deciding.\n- Aim for accurate, representative points in the described area/element/object.\n- If unclear, infer based on likely context or purpose.\n- Your final answer should be the choice you think is most correct.\n- Verify each step by examining multiple possible solutions before selecting a final coordinate.\n- Format points as (x, y)"""
+  SYSTEM_PROMPT="You are a helpful assistant tasked with answering a question about an image. You should systematically reason through the problem step by step by checking and verifying relevant image regions, while grounding reasoning steps to specific (x, y) points in the image:\nEach reasoning step must be enclosed within '<think>' tags and reference exactly one specific coordinate (x, y):\n<think>\n{Single reasoning step with a grounded point} (x, y).\n</think>\nWhen ready to provide the final answer, enclose it within '<answer>' tags:\n<answer> {final answer} </answer>\nYour task is to help the user answer the question that may involve small details in the image.\n- Generate ONLY ONE reasoning step OR the final answer per response.\n- Regions are distinct, non-overlapping areas (e.g., quadrants like top-left, small elements or objects, zones like background/foreground).\n- Each step should describe the region then evaluate it for its relevance to the task and to previous steps.\n- Never repeat coordinates from previous steps.\n- Begin by exploring diverse regions, even if they seem less likely, to ensure comprehensive coverage before narrowing down.\n- Prioritize broad coverage of diverse candidates before deciding.\n- Aim for accurate, representative points in the described area/element/object.\n- If unclear, infer based on likely context or purpose.\n- Your final answer should be the choice you think is most correct.\n- Verify each step by examining multiple possible solutions before selecting a final coordinate.\n- Format points as (x, y)"
 
   DATA_FILE="$DATA_ROOT/visual_search/vigorl_search_MCTS.jsonl"
 
@@ -34,7 +35,7 @@ elif [ "$dataset" == "vstar" ]; then
 
 elif [ "$dataset" == "web_action" ]; then
 
-  SYSTEM_PROMPT="""You are a helpful Assistant tasked with navigating a web browser. These tasks will be accomplished through the use of specific actions you can issue. Your task is to choose the action that makes the most progress towards an objective. You should systematically reason through the problem step by step by checking and verifying possible actions and webpage regions, while grounding reasoning steps to specific (x, y) points in the image:\nEach reasoning step must be enclosed within '<think>' tags and reference exactly one specific coordinate (x, y):\n<think>\n{Single reasoning step with a grounded point} (x, y).\n</think>\nWhen ready to provide the final answer, enclose it within '<answer>' tags:\n<answer> {action} </answer>\n- Generate ONLY ONE reasoning step OR the final action per response.\n- Each reasoning step must explicitly describe and evaluate the region’s relevance to the objective and proposing an action.\n- Never repeat coordinates from previous steps.\n- Look at diverse webpage regions to figure out which action should be taken.\n- Verify your selection by examining multiple possible solutions.
+  SYSTEM_PROMPT="You are a helpful Assistant tasked with navigating a web browser. These tasks will be accomplished through the use of specific actions you can issue. Your task is to choose the action that makes the most progress towards an objective. You should systematically reason through the problem step by step by checking and verifying possible actions and webpage regions, while grounding reasoning steps to specific (x, y) points in the image:\nEach reasoning step must be enclosed within '<think>' tags and reference exactly one specific coordinate (x, y):\n<think>\n{Single reasoning step with a grounded point} (x, y).\n</think>\nWhen ready to provide the final answer, enclose it within '<answer>' tags:\n<answer> {action} </answer>\n- Generate ONLY ONE reasoning step OR the final action per response.\n- Each reasoning step must explicitly describe and evaluate the region's relevance to the objective and proposing an action.\n- Never repeat coordinates from previous steps.\n- Look at diverse webpage regions to figure out which action should be taken.\n- Verify your selection by examining multiple possible solutions.
 
 **Inputs**
 Here's the information you'll have:
@@ -44,11 +45,11 @@ Here's the information you'll have:
 
 **Action Space**
 You can take the following actions:
-1. ```click [id]```: This action clicks on an element with a specific id on the webpage.
-2. ```type [id] [content]```: Use this to type the content into the field with id. By default, typing the content simulates pressing the "Enter" key afterward to submit the text.
-3. ```scroll [down]```: Scroll the page up or down.
-4. ```go_back```: Navigate to the previously viewed page.
-5. ```stop [answer]```: Issue this action when you believe the task is complete. If the objective is to find a text-based answer, provide the answer in the bracket. If no answer is required, output empty brackets.
+1. \`\`\`click [id]\`\`\`: This action clicks on an element with a specific id on the webpage.
+2. \`\`\`type [id] [content]\`\`\`: Use this to type the content into the field with id. By default, typing the content simulates pressing the \"Enter\" key afterward to submit the text.
+3. \`\`\`scroll [down]\`\`\`: Scroll the page up or down.
+4. \`\`\`go_back\`\`\`: Navigate to the previously viewed page.
+5. \`\`\`stop [answer]\`\`\`: Issue this action when you believe the task is complete. If the objective is to find a text-based answer, provide the answer in the bracket. If no answer is required, output empty brackets.
 
 **Guidelines**
 To be successful, it is very important to follow the following rules:
@@ -57,7 +58,7 @@ To be successful, it is very important to follow the following rules:
 4. In your final answer, you should only output a single action and should never output a prediction involving taking multiple actions.
 5. Reference of image regions should be formatted as '(x, y)', where x and y are the center image coordinates of the region.
 6. You should output atleast 3 reasoning steps before issuing the final action.
-"""
+"
   
   DATA_FILE="$DATA_ROOT/web_action/vigorl_web_action_MCTS.jsonl"
 
@@ -84,6 +85,13 @@ cleanup() {
 # # Set trap to call cleanup function on script exit, including Ctrl+C (SIGINT)
 trap cleanup EXIT INT TERM
 
+# Fix CUDA_VISIBLE_DEVICES if it contains UUIDs instead of numeric IDs
+if [[ "$CUDA_VISIBLE_DEVICES" == *"GPU-"* ]]; then
+  echo "[INFO] Converting CUDA_VISIBLE_DEVICES from UUIDs to numeric IDs..."
+  export CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((NUM_GPUS - 1)))
+  echo "[INFO] Set CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
+fi
+
 # ---------------------------------------------------------------------
 # 1) If ACTOR_MODEL is "qwen_vllm", check if the vllm server is running.
 #    If not running, start serve_qwen.sh in the background.
@@ -108,7 +116,7 @@ if [ "$ACTOR_MODEL" == "qwen_vllm" ]; then
   # ----------------------------------------------------------------
   echo "[INFO] Please wait for vllm server to be responsive..."
   for i in {1..360}; do
-    if curl --max-time 2 -s -o /dev/null http://localhost:9001/v1/models; then
+    if curl --max-time 2 -s -o /dev/null -H "Authorization: Bearer qwen" http://localhost:9001/v1/models; then
       echo "[INFO] vllm server is up!"
       break
     else

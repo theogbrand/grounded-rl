@@ -13,7 +13,6 @@ from vlmsearch.models import get_model
 from vlmsearch.tree_search.single_path_rollouts import SinglePathRollouts
 from vlmsearch.tree_search.mcts_search import MonteCarloTreeSearch
 from vlmsearch.reward_funcs.judge import Judge
-from datasets import load_dataset
 
 import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
@@ -21,6 +20,32 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError
 logging.basicConfig(level=logging.INFO)
 # logging.basicConfig(level=logging.DEBUG)
 print(f"Logging level: {logging.getLevelName(logging.getLogger().getEffectiveLevel())}")
+
+def load_jsonl_dataset(data_files, image_root):
+    """
+    Load JSONL files directly without HF datasets custom loading script.
+    Replicates the behavior of data_loader.py.
+    """
+    data_list = []
+    for filepath in data_files:
+        logging.info(f"Processing file: {filepath}")
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                record = json.loads(line)
+                # Unify "id" as string
+                record["id"] = str(record["id"])
+                if "image" not in record:
+                    logging.info(f"Skipping record because 'image' not in record")
+                    continue
+                if isinstance(record["image"], str):
+                    record["image"] = os.path.join(image_root, record["image"])
+                if "model" not in record:
+                    record["model"] = "None"
+                # assume first value is query, second is answer
+                record["input_query"] = record["conversations"][0]["value"]
+                record["true_answer"] = record["conversations"][1]["value"]
+                data_list.append(record)
+    return data_list
 
 def init_model_and_judge(args):
     """
@@ -150,8 +175,7 @@ def process_samples(
             if loaded_ids and sample["id"] in loaded_ids:
                 continue
 
-            sample["input_query"] = sample["conversations"]["value"][0]
-            sample["true_answer"] = sample["conversations"]["value"][1]
+            # input_query and true_answer already extracted by load_jsonl_dataset()
 
             # Execute search with timeout
             with ThreadPoolExecutor(max_workers=1) as executor:
@@ -255,19 +279,13 @@ def main():
 
     if args.use_python_mp:
         #--- Multiprocessing path ---
-        raw_dataset = load_dataset(
-            "src/vlmsearch/datasets/data_loader.py",
-            data_files={"train": data_files_list},
-            image_root=args.image_root,
-            split="train",
-            trust_remote_code=True
-        )
+        data_list = load_jsonl_dataset(data_files_list, args.image_root)
 
         if args.max_samples:
-            raw_dataset = raw_dataset.shuffle(seed=args.seed)
-            raw_dataset = raw_dataset.select(range(args.max_samples))
-
-        data_list = list(raw_dataset)
+            import random
+            random.seed(args.seed)
+            random.shuffle(data_list)
+            data_list = data_list[:args.max_samples]
         total_data_len = len(data_list)
 
         num_procs = args.num_processes if args.num_processes > 1 else 1
@@ -316,21 +334,21 @@ def main():
         kwargs_handler = InitProcessGroupKwargs(timeout=datetime.timedelta(seconds=60000))
         accelerator = Accelerator(kwargs_handlers=[kwargs_handler])
 
-        raw_dataset = load_dataset(
-            "src/vlmsearch/datasets/data_loader.py",
-            data_files={"train": args.data_files},
-            image_root=args.image_root,
-            split="train"
-        )
+        data_list = load_jsonl_dataset(data_files_list, args.image_root)
 
         if args.max_samples:
-            raw_dataset = raw_dataset.shuffle(seed=args.seed)
-            raw_dataset = raw_dataset.select(range(args.max_samples))
+            import random
+            random.seed(args.seed)
+            random.shuffle(data_list)
+            data_list = data_list[:args.max_samples]
 
-        dataset_shard = raw_dataset.shard(
-            num_shards=accelerator.num_processes,
-            index=accelerator.process_index
-        )
+        # Manual sharding for accelerate
+        num_shards = accelerator.num_processes
+        shard_index = accelerator.process_index
+        shard_size = len(data_list) // num_shards
+        start_idx = shard_index * shard_size
+        end_idx = start_idx + shard_size if shard_index < num_shards - 1 else len(data_list)
+        dataset_shard = data_list[start_idx:end_idx]
 
         model_wrapper, judge, tree_searcher = init_model_and_judge(args)
 
@@ -338,8 +356,7 @@ def main():
         checkpoint_interval = getattr(args, "checkpoint_interval", 100)
 
         for idx, sample in enumerate(tqdm(dataset_shard, desc="Processing dataset_shard", disable=not accelerator.is_main_process)):
-            sample["input_query"] = sample["conversations"]["value"][0]
-            sample["true_answer"] = sample["conversations"]["value"][1]
+            # input_query and true_answer already extracted by load_jsonl_dataset()
 
             try:
                 search_outputs = tree_searcher.search(
