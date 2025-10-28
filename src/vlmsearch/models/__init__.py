@@ -12,6 +12,7 @@ logger.add(sys.stdout, level="WARNING")
 AVAILABLE_MODELS = {
     "qwen2_vl": "Qwen2_VL",
     "qwen2_5_vl": "Qwen2_5_VL",
+    "qwen3_vl": "Qwen3_VL",
     "gpt4o": "GPT4o",
     "qwen_vllm": "Qwen_VLLM",
 }
